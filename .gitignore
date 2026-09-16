@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# typescript build info
+*.tsbuildinfo
+
+# supabase cli local state
+supabase/.temp/
+supabase/.branches/
+
+# logs
+npm-debug.log*
+*.log
+
+# os
+.DS_Store

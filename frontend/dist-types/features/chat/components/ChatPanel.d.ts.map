@@ -1,0 +1,1 @@
+{"version":3,"file":"ChatPanel.d.ts","sourceRoot":"","sources":["../../../../src/features/chat/components/ChatPanel.tsx"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,UAAU,EAAoC,MAAM,qBAAqB,CAAC;AA2BxF;;;;;;;;GAQG;AACH,wBAAgB,SAAS,CAAC,EAAE,OAAO,EAAE,EAAE;IAAE,OAAO,EAAE,UAAU,CAAA;CAAE,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CA4LjF"}

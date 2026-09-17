@@ -1,7 +1,9 @@
 export * from './types/index.js';
 export * from './types/intent.js';
 export * from './types/models.js';
+export * from './types/people.js';
 export * from './types/skill-chat.js';
+export * from './types/team.js';
 export * from './validation/index.js';
 export type {
   Database,

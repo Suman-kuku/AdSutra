@@ -1,5 +1,4 @@
 import type { RequestHandler } from 'express';
-import { env } from '../config/env.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { getPersonById, toPersonDTO } from '../services/people.service.js';
 import { AppError } from './errorHandler.js';
@@ -11,15 +10,13 @@ function bearerToken(header: string | undefined): string | null {
   return token;
 }
 
-function isAllowedDomain(email: string): boolean {
-  return email.toLowerCase().endsWith(`@${env.ALLOWED_EMAIL_DOMAIN.toLowerCase()}`);
-}
-
 /**
  * Verifies the caller's Supabase JWT and attaches their `people` row.
  *
- * Domain restriction is enforced here rather than only at login, so a session
- * minted before the rule existed still cannot reach a protected route.
+ * Anyone with a Google account can sign in and get a profile row. Signing in
+ * is not access — `access_status` is, and an admin decides it on the People
+ * page. Checked on every request, not only at login, so revoking access takes
+ * effect on the next call rather than at the next sign-in.
  */
 export const requireAuth: RequestHandler = (req, _res, next) => {
   void (async () => {
@@ -34,23 +31,28 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
         throw AppError.unauthorized('Invalid or expired session.', 'INVALID_TOKEN');
       }
 
-      const email = data.user.email;
-      if (!email) {
+      if (!data.user.email) {
         throw AppError.forbidden('Your Google account has no email address.', 'NO_EMAIL');
-      }
-      if (!isAllowedDomain(email)) {
-        throw AppError.forbidden(
-          `Sign-in is restricted to @${env.ALLOWED_EMAIL_DOMAIN} accounts.`,
-          'DOMAIN_NOT_ALLOWED',
-        );
       }
 
       const person = await getPersonById(data.user.id);
       if (!person) {
         throw AppError.forbidden('No profile found for this account.', 'NO_PROFILE');
       }
-      if (!person.is_active) {
-        throw AppError.forbidden('This account has been deactivated.', 'ACCOUNT_INACTIVE');
+      // The `people` row exists from first sign-in onward, so "has a row" is
+      // not "has access" — `access_status` is. A pending row *is* the waitlist
+      // entry an admin sees.
+      if (person.access_status === 'pending') {
+        throw AppError.forbidden(
+          'Your access request is waiting for an admin to approve it.',
+          'ACCESS_PENDING',
+        );
+      }
+      if (person.access_status === 'denied') {
+        throw AppError.forbidden(
+          'Your access to this workspace has been removed.',
+          'ACCESS_DENIED',
+        );
       }
 
       req.user = toPersonDTO(person);

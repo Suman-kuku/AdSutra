@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import type { EpisodeDTO, GenerateRequestInput, MessageDTO } from '@scriptcraft/shared';
+import { EpisodeBar } from '../../episodes';
+import { SplitHandle } from '../../../components/ui/SplitHandle';
+import { useSplitWidth } from '../../../hooks/useSplitWidth';
 import { MessageList } from './MessageList';
 import { Composer } from './Composer';
 import { PromoPanel } from './PromoPanel';
@@ -14,6 +17,12 @@ import {
   useSelectedModel,
 } from '../hooks/useChat';
 import * as chatService from '../services/chat.service';
+
+/**
+ * Default split. Under half to the chat: its turns are short, while the promo
+ * is a full script with timecodes and wraps badly in a narrow column.
+ */
+const DEFAULT_CHAT_PERCENT = 42;
 
 /** The most recent assistant turn that produced promo copy, not a QA answer or a failed turn. */
 function findLatestDraft(messages: MessageDTO[]): MessageDTO | null {
@@ -53,6 +62,7 @@ export function ChatPanel({ episode }: { episode: EpisodeDTO }): React.JSX.Eleme
   const save = useSavePromo(episode.id);
   const deletePromo = useDeletePromo(episode.id);
   const { model, setModel } = useSelectedModel();
+  const split = useSplitWidth('chat:splitPercent', DEFAULT_CHAT_PERCENT);
 
   const notReady = episode.status !== 'ready';
   const draft = findLatestDraft(messages.data ?? []);
@@ -144,8 +154,22 @@ export function ChatPanel({ episode }: { episode: EpisodeDTO }): React.JSX.Eleme
   };
 
   return (
-    <div className="flex flex-col gap-6 lg:min-h-0 lg:flex-1 lg:flex-row">
-      <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-slate-50 lg:min-h-0 lg:flex-1">
+    // This is now the page root, so it owns the full height the old page
+    // wrapper used to provide.
+    <div
+      ref={split.containerRef}
+      className={`flex flex-col gap-6 lg:h-full lg:min-h-0 lg:gap-0 lg:flex-row ${
+        // While dragging, the pointer sweeps across both panes and would
+        // otherwise select their text.
+        split.isDragging ? 'select-none' : ''
+      }`}
+    >
+      <section
+        style={split.leftPercent === null ? undefined : { width: `${split.leftPercent}%` }}
+        // Drops its right edge at `lg` so the drag handle supplies the only
+        // line between the two panes.
+        className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:min-w-0 lg:shrink-0 lg:rounded-r-none lg:border-r-0"
+      >
         <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
           <h2 className="text-sm font-semibold">Generate Promo</h2>
           <div className="flex items-center gap-2">
@@ -171,6 +195,8 @@ export function ChatPanel({ episode }: { episode: EpisodeDTO }): React.JSX.Eleme
             )}
           </div>
         </header>
+
+        <EpisodeBar episode={episode} />
 
         {notReady ? (
           <div className="flex flex-1 items-center justify-center p-8">
@@ -206,6 +232,12 @@ export function ChatPanel({ episode }: { episode: EpisodeDTO }): React.JSX.Eleme
           onCancel={gen.cancel}
         />
       </section>
+
+      <SplitHandle
+        isDragging={split.isDragging}
+        valueNow={split.leftPercent ?? DEFAULT_CHAT_PERCENT}
+        handleProps={split.handleProps}
+      />
 
       <PromoPanel
         latestPromo={draft?.content ?? null}

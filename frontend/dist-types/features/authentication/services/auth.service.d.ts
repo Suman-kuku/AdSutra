@@ -1,8 +1,7 @@
 import type { PersonDTO } from '@scriptcraft/shared';
 /**
- * Starts the Google OAuth redirect. `hd` asks Google to show only company
- * accounts — a convenience, not a control. The real restriction is enforced
- * server-side in auth.middleware.
+ * Starts the Google OAuth redirect. Any Google account may sign in — that only
+ * creates a profile and a waitlist entry; an admin grants the actual access.
  */
 export declare function signInWithGoogle(): Promise<void>;
 export declare function signOut(): Promise<void>;

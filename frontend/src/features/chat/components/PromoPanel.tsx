@@ -126,7 +126,8 @@ export function PromoPanel({
     }`;
 
   return (
-    <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:flex-1">
+    // The left edge is dropped at `lg`: the split handle is the seam.
+    <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:min-w-0 lg:flex-1 lg:rounded-l-none lg:border-l-0">
       <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
         <h2 className="text-sm font-semibold">Promo</h2>
         <div className="flex items-center gap-2">
@@ -219,8 +220,13 @@ export function PromoPanel({
             {displayed}
           </p>
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <p className="max-w-xs text-center text-sm text-slate-400">
+          <div className="flex h-full flex-col items-center justify-center gap-4">
+            <span className="grid h-14 w-14 place-items-center rounded-xl border-2 border-slate-200 text-slate-300">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M9 7.5v9a.75.75 0 0 0 1.14.64l7.5-4.5a.75.75 0 0 0 0-1.28l-7.5-4.5A.75.75 0 0 0 9 7.5z" />
+              </svg>
+            </span>
+            <p className="max-w-xs text-center text-slate-400">
               Your generated promo will appear here.
             </p>
           </div>

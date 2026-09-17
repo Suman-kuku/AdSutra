@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { APIResponse, HealthStatus } from '@scriptcraft/shared';
 import { requireAuth } from '../middleware/auth.middleware.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
 import { createSession, getMe } from '../controllers/auth.controller.js';
 import { validateBody } from '../middleware/validate.js';
 import {
@@ -11,6 +12,9 @@ import {
   publishRequestSchema,
   updateVersionRequestSchema,
   skillChatRequestSchema,
+  createTeamSchema,
+  updatePersonRoleSchema,
+  updateTeamSchema,
   uploadSkillFileSchema,
   uploadUrlSchema,
 } from '@scriptcraft/shared';
@@ -45,6 +49,18 @@ import {
 } from '../controllers/episode.controller.js';
 import { createShow, getShow, listShows } from '../controllers/show.controller.js';
 import { deletePromo, listEpisodePromos, savePromo } from '../controllers/promo.controller.js';
+import {
+  createTeam,
+  deleteTeam,
+  listTeams,
+  updateTeam,
+} from '../controllers/team.controller.js';
+import {
+  approvePerson,
+  denyPerson,
+  listPeople,
+  updatePersonRole,
+} from '../controllers/people.controller.js';
 
 export const apiRouter: Router = Router();
 
@@ -126,3 +142,30 @@ apiRouter.get('/episodes/:id/promos', requireAuth, listEpisodePromos);
 apiRouter.post('/conversations/:id/save-promo', requireAuth, savePromo);
 apiRouter.delete('/promos/:id', requireAuth, deletePromo);
 apiRouter.post('/conversations/:id/archive', requireAuth, archiveConversation);
+
+// People — admin only. Access is a status on the row; no row is ever deleted.
+// ?status=approved (Active tab) | pending (waitlist) | denied.
+apiRouter.get('/admin/people', requireAuth, requireAdmin, listPeople);
+apiRouter.patch(
+  '/admin/people/:id/role',
+  requireAuth,
+  requireAdmin,
+  validateBody(updatePersonRoleSchema),
+  updatePersonRole,
+);
+apiRouter.post('/admin/people/:id/approve', requireAuth, requireAdmin, approvePerson);
+// Reject from the waitlist and remove from the Active tab are the same write.
+apiRouter.post('/admin/people/:id/deny', requireAuth, requireAdmin, denyPerson);
+
+// Teams — everyone can see them, only admins manage them. A team grants
+// nothing on its own; it is a named group of people.
+apiRouter.get('/teams', requireAuth, listTeams);
+apiRouter.post('/teams', requireAuth, requireAdmin, validateBody(createTeamSchema), createTeam);
+apiRouter.patch(
+  '/teams/:id',
+  requireAuth,
+  requireAdmin,
+  validateBody(updateTeamSchema),
+  updateTeam,
+);
+apiRouter.delete('/teams/:id', requireAuth, requireAdmin, deleteTeam);

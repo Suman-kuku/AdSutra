@@ -4,15 +4,34 @@ import { AppError } from '../middleware/errorHandler.js';
 
 type ShowRow = Tables<'shows'>;
 
-export function toShowDTO(row: ShowRow): ShowDTO {
+/**
+ * A show plus its episode count. PostgREST returns an aggregate embed as a
+ * one-element array (`episodes: [{ count: 3 }]`), which is why this is not
+ * simply a number.
+ */
+export type ShowRowWithCount = ShowRow & {
+  episodes: { count: number }[];
+  owner: { name: string | null; email: string } | null;
+};
+
+/**
+ * Asks PostgREST for the row, the count of its episodes and the owner's name in
+ * one request. The owner is named explicitly because team sharing puts other
+ * people's shows in the same list as yours.
+ */
+const SHOW_SELECT = '*, episodes(count), owner:people!shows_owner_id_fkey(name, email)';
+
+export function toShowDTO(row: ShowRowWithCount): ShowDTO {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    ownerName: row.owner?.name ?? row.owner?.email ?? null,
     title: row.title,
     description: row.description,
     genre: row.genre,
     language: row.language,
     defaultSkillFileId: row.default_skill_file_id,
+    episodeCount: row.episodes[0]?.count ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -23,8 +42,8 @@ export function toShowDTO(row: ShowRow): ShowDTO {
  * see their own shows, admins see all — is enforced by the `shows_select`
  * policy rather than re-implemented in JS.
  */
-export async function listShows(db: Db): Promise<ShowRow[]> {
-  const { data, error } = await db.from('shows').select('*').order('created_at', {
+export async function listShows(db: Db): Promise<ShowRowWithCount[]> {
+  const { data, error } = await db.from('shows').select(SHOW_SELECT).order('created_at', {
     ascending: false,
   });
 
@@ -34,8 +53,8 @@ export async function listShows(db: Db): Promise<ShowRow[]> {
   return data;
 }
 
-export async function getShowById(db: Db, id: string): Promise<ShowRow> {
-  const { data, error } = await db.from('shows').select('*').eq('id', id).maybeSingle();
+export async function getShowById(db: Db, id: string): Promise<ShowRowWithCount> {
+  const { data, error } = await db.from('shows').select(SHOW_SELECT).eq('id', id).maybeSingle();
 
   if (error) {
     throw new AppError(500, 'SHOW_READ_FAILED', 'Could not load this show.', { cause: error });
@@ -52,7 +71,7 @@ export async function createShow(
   db: Db,
   ownerId: string,
   input: CreateShowInput,
-): Promise<ShowRow> {
+): Promise<ShowRowWithCount> {
   const { data, error } = await db
     .from('shows')
     .insert({
@@ -62,7 +81,7 @@ export async function createShow(
       genre: input.genre ?? null,
       language: input.language ?? null,
     })
-    .select('*')
+    .select(SHOW_SELECT)
     .single();
 
   if (error || !data) {

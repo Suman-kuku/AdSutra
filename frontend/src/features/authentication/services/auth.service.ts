@@ -3,16 +3,15 @@ import { supabase } from '../../../services/supabase.client';
 import { apiFetch } from '../../../services/api.client';
 
 /**
- * Starts the Google OAuth redirect. `hd` asks Google to show only company
- * accounts — a convenience, not a control. The real restriction is enforced
- * server-side in auth.middleware.
+ * Starts the Google OAuth redirect. Any Google account may sign in — that only
+ * creates a profile and a waitlist entry; an admin grants the actual access.
  */
 export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: window.location.origin,
-      queryParams: { hd: 'kukufm.com', prompt: 'select_account' },
+      queryParams: { prompt: 'select_account' },
     },
   });
   if (error) throw error;

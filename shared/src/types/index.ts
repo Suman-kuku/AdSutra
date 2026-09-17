@@ -36,11 +36,23 @@ export interface PersonDTO {
 export interface ShowDTO {
   id: string;
   ownerId: string;
+  /**
+   * Who owns it. Set because a team shares shows: without a name on the row,
+   * a teammate's show is indistinguishable from your own. Null only if the
+   * owner row went away.
+   */
+  ownerName: string | null;
   title: string;
   description: string | null;
   genre: string | null;
   language: string | null;
   defaultSkillFileId: string | null;
+  /**
+   * How many episodes the show has. Counted in the same query as the row so
+   * the shows rail can label each one without N round trips — RLS applies to
+   * the join too, so this is the count the caller is allowed to see.
+   */
+  episodeCount: number;
   createdAt: string;
   updatedAt: string;
 }

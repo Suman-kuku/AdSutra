@@ -333,7 +333,8 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
-# Google — the only provider ScriptCraft uses. Sign-in is restricted to @kukufm.com.
+# Google — the only provider ScriptCraft uses. Any Google account may sign in;
+# access is granted per person on the admin People page (waitlist).
 # NOTE: this block documents intent and configures `supabase start` (local dev) only.
 # The hosted Story-Engine project is configured in the Supabase dashboard.
 # Do NOT run `supabase config push` — the rest of this file is still the stock

@@ -1,0 +1,1 @@
+{"version":3,"file":"PersonIdentity.d.ts","sourceRoot":"","sources":["../../../../src/features/people/components/PersonIdentity.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,qBAAqB,CAAC;AAE1D,kEAAkE;AAClE,wBAAgB,cAAc,CAAC,EAC7B,MAAM,EACN,MAAM,GACP,EAAE;IACD,MAAM,EAAE,cAAc,CAAC;IACvB,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CAqBpB"}

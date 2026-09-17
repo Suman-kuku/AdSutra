@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { AttachedPromo, MessageDTO, SkillChatRequest } from '@scriptcraft/shared';
 import { splitSkillEditorOutput } from '@scriptcraft/shared';
 import { useSelectedModel } from '../features/chat/hooks/useChat';
+import { SplitHandle } from '../components/ui/SplitHandle';
+import { useSplitWidth } from '../hooks/useSplitWidth';
 import {
   AttachPromosModal,
   SaveVersionModal,
@@ -17,6 +19,12 @@ import {
   useSkillFileVersions,
   useUpdateSkillFileVersion,
 } from '../features/skill-files';
+
+/**
+ * Default split. Under half to the chat: the right pane holds a whole `.md`
+ * in a monospace column, which wraps badly when it is the narrower of the two.
+ */
+const DEFAULT_CHAT_PERCENT = 42;
 
 /**
  * The most recent revised `.md` proposed in this thread, if any.
@@ -52,6 +60,7 @@ export function SkillFileChatPage(): React.JSX.Element {
   const updateInPlace = useUpdateSkillFileVersion(slug);
   const clearChat = useClearSkillChat(slug);
   const { model, setModel } = useSelectedModel();
+  const split = useSplitWidth('skill-chat:splitPercent', DEFAULT_CHAT_PERCENT);
 
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const loaded = useSkillFileVersion(slug, selectedVersion);
@@ -184,21 +193,9 @@ export function SkillFileChatPage(): React.JSX.Element {
   const isDirty = loaded.data !== undefined && content !== null && content !== loaded.data.rawMd;
 
   return (
-    <div className="flex flex-col gap-4 lg:h-[calc(100vh-8rem)]">
-      <div className="min-w-0">
-        <Link
-          to={`/skill-files/${slug}`}
-          className="text-sm text-slate-500 transition hover:text-slate-900"
-        >
-          ← {file.data?.name ?? 'Skill file'}
-        </Link>
-        {file.data && (
-          <p className="mt-0.5 font-mono text-xs text-slate-400">
-            {file.data.slug} · v{file.data.version} · {file.data.category}
-          </p>
-        )}
-      </div>
-
+    // No page header: the file's identity rides at the top of the chat panel,
+    // the same way the episode chat carries its episode.
+    <div className="flex flex-col gap-4 lg:h-full lg:min-h-0">
       {file.isError && (
         <p className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
           {file.error.message}
@@ -206,8 +203,15 @@ export function SkillFileChatPage(): React.JSX.Element {
       )}
 
       {file.data && content !== null && selectedVersion !== null && (
-        <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row">
+        <div
+          ref={split.containerRef}
+          className={`flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-0 ${
+            split.isDragging ? 'select-none' : ''
+          }`}
+        >
           <SkillFileChat
+            file={file.data}
+            widthPercent={split.leftPercent}
             skillFileName={file.data.name}
             messages={chat.data?.messages ?? []}
             streamingSummary={streamingSummary}
@@ -224,6 +228,12 @@ export function SkillFileChatPage(): React.JSX.Element {
             onSend={handleSend}
             onCancel={turn.cancel}
             onClear={handleClearChat}
+          />
+
+          <SplitHandle
+            isDragging={split.isDragging}
+            valueNow={split.leftPercent ?? DEFAULT_CHAT_PERCENT}
+            handleProps={split.handleProps}
           />
 
           <SkillFileContent

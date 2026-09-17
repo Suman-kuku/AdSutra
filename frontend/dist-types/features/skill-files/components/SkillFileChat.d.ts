@@ -1,7 +1,11 @@
-import type { AttachedPromo, MessageDTO, SelectableModelId } from '@scriptcraft/shared';
+import type { AttachedPromo, MessageDTO, SelectableModelId, SkillFileDetailDTO } from '@scriptcraft/shared';
 import type { PendingMessage, SkillIntentInfo } from '../hooks/useSkillChat';
 interface Props {
+    /** The version being worked on — its identity bar sits above the transcript. */
+    file: SkillFileDetailDTO;
     skillFileName: string;
+    /** Width of this pane as a percentage, or null while the panes are stacked. */
+    widthPercent: number | null;
     messages: MessageDTO[];
     /** The prose half of the turn currently streaming. */
     streamingSummary: string;
@@ -29,6 +33,6 @@ interface Props {
  * to the content panel on the right, because pasting a whole file into a chat
  * bubble makes both unreadable.
  */
-export declare function SkillFileChat({ skillFileName, messages, streamingSummary, isGenerating, intentInfo, error, pending, pendingMessage, model, isClearing, onModelChange, onOpenAttach, onClearPending, onSend, onCancel, onClear, }: Props): React.JSX.Element;
+export declare function SkillFileChat({ file, skillFileName, widthPercent, messages, streamingSummary, isGenerating, intentInfo, error, pending, pendingMessage, model, isClearing, onModelChange, onOpenAttach, onClearPending, onSend, onCancel, onClear, }: Props): React.JSX.Element;
 export {};
 //# sourceMappingURL=SkillFileChat.d.ts.map

@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AttachedPromo, MessageDTO, SelectableModelId } from '@scriptcraft/shared';
+import type {
+  AttachedPromo,
+  MessageDTO,
+  SelectableModelId,
+  SkillFileDetailDTO,
+} from '@scriptcraft/shared';
 import { parseAttachedPromos, splitAttachedBlock, splitSkillEditorOutput } from '@scriptcraft/shared';
 import { AutoTextarea } from '../../../components/ui/AutoTextarea';
 import { IntentBadge } from '../../chat/components/IntentBadge';
 import { ModelPicker } from '../../chat/components/ModelPicker';
 import { AttachedPromosView, type DisplayPromo } from './AttachedPromosView';
+import { SkillFileBar } from './SkillFileBar';
 import type { PendingMessage, SkillIntentInfo } from '../hooks/useSkillChat';
 
 interface Props {
+  /** The version being worked on — its identity bar sits above the transcript. */
+  file: SkillFileDetailDTO;
   skillFileName: string;
+  /** Width of this pane as a percentage, or null while the panes are stacked. */
+  widthPercent: number | null;
   messages: MessageDTO[];
   /** The prose half of the turn currently streaming. */
   streamingSummary: string;
@@ -41,7 +51,9 @@ const BOTTOM_THRESHOLD = 96;
  * bubble makes both unreadable.
  */
 export function SkillFileChat({
+  file,
   skillFileName,
+  widthPercent,
   messages,
   streamingSummary,
   isGenerating,
@@ -92,7 +104,12 @@ export function SkillFileChat({
   };
 
   return (
-    <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-slate-50 lg:min-h-0 lg:flex-1">
+    // Drops its right edge at `lg` so the drag handle is the only line
+    // between the two panes.
+    <section
+      style={widthPercent === null ? undefined : { width: `${widthPercent}%` }}
+      className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:min-w-0 lg:shrink-0 lg:rounded-r-none lg:border-r-0"
+    >
       <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
         <h2 className="text-sm font-semibold">Chat with Skill File</h2>
         <div className="flex items-center gap-2">
@@ -116,6 +133,8 @@ export function SkillFileChat({
           )}
         </div>
       </header>
+
+      <SkillFileBar file={file} />
 
       <div
         ref={containerRef}

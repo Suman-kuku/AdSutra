@@ -25,13 +25,6 @@ interface Props {
   saveError: string | null;
 }
 
-/**
- * Past this the file has usually accumulated one narrow rule per past failure
- * and output quality drops. CLAUDE.md section 12 — the agent is told the same
- * number, so the two warnings agree.
- */
-const BLOAT_WORD_LIMIT = 800;
-
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -69,12 +62,13 @@ export function SkillFileContent({
   saveError,
 }: Props): React.JSX.Element {
   const words = wordCount(content);
-  const isBloated = words > BLOAT_WORD_LIMIT;
   const loaded = versions.find((version) => version.version === selectedVersion) ?? null;
   const isRetired = loaded !== null && !loaded.isActive;
 
   return (
-    <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:w-[45%]">
+    // The left edge is dropped at `lg`: the split handle is the seam. Width is
+    // no longer fixed at 45% — the user drags it.
+    <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:min-h-0 lg:min-w-0 lg:flex-1 lg:rounded-l-none lg:border-l-0">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-sm font-semibold">Skill File Content</h2>
@@ -156,10 +150,7 @@ export function SkillFileContent({
       )}
 
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-2 text-xs">
-        <span className={isBloated ? 'font-medium text-amber-700' : 'text-slate-400'}>
-          {words} words
-          {isBloated && ` — over ${BLOAT_WORD_LIMIT}. Cut something before adding more.`}
-        </span>
+        <span className="text-slate-400">{words} words</span>
         {savedNote && <span className="font-medium text-emerald-700">{savedNote}</span>}
         {isStreaming && <span className="text-slate-400">Writing…</span>}
       </footer>

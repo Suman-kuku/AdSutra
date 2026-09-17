@@ -190,23 +190,7 @@ export function Composer({
         {/* `items-end` and a softer radius, not a pill: once the textarea grows
             past one line a `rounded-full` box turns into a tall lozenge and the
             buttons drift to the vertical middle, away from the caret. */}
-        <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white py-1.5 pl-2 pr-1.5">
-          <button
-            type="button"
-            disabled
-            title="Attach (coming soon)"
-            aria-label="Attach (coming soon)"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 disabled:cursor-not-allowed"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.19 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"
-              />
-            </svg>
-          </button>
-
+        <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white py-1.5 pl-2.5 pr-1.5">
           <ModelPicker value={model} disabled={disabled || isGenerating} onChange={onModelChange} />
 
           <AutoTextarea
@@ -253,12 +237,6 @@ export function Composer({
           )}
         </div>
 
-        {!hasDraft && !selected && (
-          <p className="mt-1.5 text-xs text-slate-400">
-            Pick a skill file with <span className="font-mono">@</span> to generate a promo — or just
-            ask a question about the script.
-          </p>
-        )}
       </div>
     </div>
   );

@@ -11,9 +11,6 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
 
-  /** Sign-in is restricted to this email domain. See CLAUDE.md §4. */
-  ALLOWED_EMAIL_DOMAIN: z.string().min(1).default('kukufm.com'),
-
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
   // Backend only. This key bypasses RLS — it must never reach the browser.

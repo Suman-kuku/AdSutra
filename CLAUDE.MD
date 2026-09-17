@@ -120,13 +120,13 @@ kaand/
 │   ├── src/
 │   │   ├── assets/
 │   │   ├── components/
-│   │   │   ├── ui/            # Button, Input, Modal, Badge
-│   │   │   └── layout/        # Sidebar, Topbar, AppShell
+│   │   │   ├── ui/            # Modal, StatusBadge, AutoTextarea, SplitHandle
+│   │   │   └── layout/        # AppShell (topbar only — no sidebar yet)
 │   │   ├── context/           # AuthContext, ThemeContext
 │   │   ├── features/
 │   │   │   ├── authentication/
-│   │   │   ├── shows/
-│   │   │   ├── episodes/      # upload, script preview, details panel
+│   │   │   ├── shows/         # rail, detail panel, create form
+│   │   │   ├── episodes/      # upload, episodes table, EpisodeBar
 │   │   │   ├── chat/          # episode chat: message list, composer, SSE hook, refine chips
 │   │   │   ├── skill-files/   # library, upload, detail, version history,
 │   │   │   │                  # skill file chat + content editor (section 12)
@@ -134,7 +134,7 @@ kaand/
 │   │   │   ├── performance/   # report modal, leaderboard
 │   │   │   └── admin/
 │   │   │       └── (each feature: components/ hooks/ services/ index.ts)
-│   │   ├── hooks/
+│   │   ├── hooks/             # useSplitWidth (resizable panes)
 │   │   ├── pages/
 │   │   ├── routes/
 │   │   ├── services/api.client.ts
@@ -201,8 +201,8 @@ kaand/
 > `skill_file_leaderboard` view, all RLS policies and both storage buckets exist.
 > `supabase migration list` shows a matching remote timestamp for all four.
 >
-> A **fifth** migration was added for build step 8. A **sixth** and **seventh** are
-> specified but not yet written — see below.
+> A **fifth** migration was added for build step 8 and a **sixth** for step 9;
+> both are applied. A **seventh** is specified but not yet written — see below.
 
 The migration files live in `supabase/migrations/`:
 
@@ -216,12 +216,13 @@ The migration files live in `supabase/migrations/`:
   saved one", and `messages` is append-only so the intent must be written at
   insert time. Written idempotently (`if not exists`) because the statements may
   already have been run by hand in the SQL editor.
-- `20260916090000_skill_chat.sql` — **not yet written, for step 9.** Makes
+- `20260916090000_skill_chat.sql` — **applied 2026-09-16, for step 9.** Makes
   `conversations.episode_id` nullable and adds `conversations.kind`
   (`episode | skill_file`) plus `conversations.skill_file_slug`, so the skill file
   chat reuses the existing conversation/message tables instead of a parallel chat
-  system. Also replaces the `conversations_insert` RLS policy, which currently
-  assumes every conversation has an episode. See section 12.
+  system. Replaces the `conversations_insert` RLS policy, which assumed every
+  conversation has an episode, adds a `conversations_one_subject` check
+  constraint and a `(skill_file_slug, created_by)` partial index. See section 12.
 - `..._performance_reason_tags.sql` — **not yet written, for step 11.** Adds
   `promo_performance.reason_tags text[]`. See section 12, phase B.
 
@@ -400,14 +401,17 @@ POST   /admin/performance/:id/verify
 > for refinement. It is **removed**. Section 11's router decides create vs refine
 > vs question, so every episode-chat user turn goes through `/generate`.
 
-> **Live as of 2026-09-15:** everything above **except** these, which are still
-> unbuilt — the five skill-file chat routes (`/chat` GET + POST, `/chat/clear`,
-> `/publish`, plus `/promos` for the attach picker — step 9),
-> `POST /promos/:id/edit` (step 10), `GET /promos/:id/versions` (the service
+> **Live as of 2026-09-17:** everything above **except** these, which are still
+> unbuilt — `POST /promos/:id/edit` (step 10), `GET /promos/:id/versions` (the service
 > function exists, no route yet), `POST /promos/:id/approve`,
 > `POST /promos/:id/performance` (step 11), `GET /leaderboard` (step 12),
 > `/version-stats` and `/feedback` (step 13), and all three `/admin` routes
-> (step 14).
+> (step 14). The seven skill-file chat and version routes went live with step 9.
+
+> **Not an endpoint change, but a response one:** `GET /shows` and `GET /shows/:id`
+> now select `*, episodes(count)` and `ShowDTO` carries `episodeCount`, for the
+> shows rail's per-row count. RLS applies to the embed, so it is the count the
+> caller is allowed to see.
 
 ---
 
@@ -437,12 +441,13 @@ Do these **in order, one at a time, stopping after each**:
    (see section 6). Also added, not in the original spec: a **model picker** in
    the composer (`shared/src/types/models.ts` is the allowed list; classification
    always stays on `CLASSIFIER_MODEL`).
-9. **Skill file chat — phase A (C10)** — **NEXT.** Section 12. Two-panel skill file
-   page: chat left, editable content right. Ask, rewrite, attach a batch of promos
-   with what worked and what didn't, Save as a new version, Clear chat.
-   Needs the sixth migration. **Does not depend on performance reporting** — the
-   "why" is typed by the user in this phase.
-10. **Human edit on promos (C8b)** — Inline editor, `human_edit_ratio`, version
+9. ~~**Skill file chat — phase A (C10)**~~ — **DONE 2026-09-16.** Section 12.
+   Two-panel skill file page: chat left, editable content right. Ask, rewrite,
+   attach a batch of promos with what worked and what didn't, Save as a new
+   version, Save in place, Clear chat. The **sixth migration** was written and
+   applied. Built as specified, including both save paths and the required
+   changelog. Deviations from section 12 are noted there.
+10. **Human edit on promos (C8b)** — **NEXT.** Inline editor, `human_edit_ratio`, version
     history UI. `createPromo` already accepts `humanEditRatio`; nothing computes
     or sends it yet, and `POST /promos/:id/edit` does not exist. The saved-promo
     version tabs built in step 8 are read-only.
@@ -474,21 +479,25 @@ Do these **in order, one at a time, stopping after each**:
 
 ## 10. Episode chat page — build breakdown
 
-Three columns: global sidebar (left) · script rail (middle) · chat (right).
-Header carries breadcrumbs, episode title, status line, and actions.
+**Superseded 2026-09-17.** The mockup's three columns (sidebar · script rail ·
+chat) and its page header are gone. The page is now **two resizable panes** —
+chat left, promo right — filling the screen under the topbar, with the
+episode's identity as a collapsible bar at the top of the chat pane rather than
+a header above it. The script rail's job is done by that bar's **View original**.
+See "Page layout" below.
 
 | # | Piece | Depends on | Notes |
 |---|---|---|---|
-| C1 | **App shell** — sidebar nav, breadcrumbs, topbar | — | **NOT DONE.** Only a topbar with Shows / Skill Files links exists. |
+| C1 | **App shell** — sidebar nav, breadcrumbs, topbar | — | **PARTIAL.** Topbar with Shows / Skill Files, user, Sign out. No sidebar, no breadcrumbs. |
 | C2 | ~~**Script parsing**~~ | step 5 | **DONE.** |
-| C3 | ~~**Script rail**~~ | C2 | **DONE.** Script card + signed-URL View, preview excerpt, details, full-script modal. |
+| C3 | ~~**Script rail**~~ | C2 | **DONE, then folded away 2026-09-17.** The separate rail and `ScriptFileCard` are deleted; signed-URL View and the file details live in `EpisodeBar`. |
 | C4 | ~~**Skill file library**~~ | step 6 | **DONE.** |
 | C5 | ~~**Skill file picker in chat**~~ | C4 | **DONE, as an `@`-mention autocomplete in the composer**, not the mockup's 4-card grid — my decision, it scales past four files. Plain list ordering until C9. |
 | C6 | ~~**Conversation + transcript**~~ | C4 | **DONE.** Lazy conversation creation, append-only messages, list + composer. |
 | C7 | ~~**Generate**~~ | C6, step 7 | **DONE.** SSE stream into chat, Copy, Stop/abort, token + latency readout. |
 | C8a | ~~**Intent routing + refine**~~ | C7, step 8 | **DONE 2026-09-15.** See section 11. Includes Save, saved-promo tabs, delete version, model picker. |
-| C10 | **Skill file chat — phase A** | C4, step 9 | **NEXT.** Section 12. Chat + content editor + attach promos + Save as version. |
-| C8b | **Human edit on promos** | C8a, step 10 | Inline editor, `human_edit_ratio`. Promo version tabs exist but are read-only. |
+| C10 | ~~**Skill file chat — phase A**~~ | C4, step 9 | **DONE 2026-09-16.** Section 12. Chat + content editor + attach promos + both save paths + Clear chat. |
+| C8b | **Human edit on promos** | C8a, step 10 | **NEXT.** Inline editor, `human_edit_ratio`. Promo version tabs exist but are read-only. |
 | C9 | **Picker ranking** | C5, step 12 | Read `skill_file_leaderboard`; see section 9. |
 | C11 | **Skill file chat — phase B** | C10, step 13 | Auto-filled outcomes, feedback view, version win rates. |
 
@@ -503,11 +512,48 @@ Header carries breadcrumbs, episode title, status line, and actions.
 | **Notifications** (bell) | No table. In scope at all? |
 | **Upgrade to Pro** (sidebar) | Billing — outside section 2's product scope |
 | **Output: Text** (composer) | No column for output format on `promos` |
-| **Attach** (episode composer paperclip) | Undefined — attach what, stored where? (The skill file chat's paperclip **is** defined — see section 12.) |
+| ~~**Attach** (episode composer paperclip)~~ | **Removed 2026-09-17.** It was a permanently disabled button; still undefined, so it is gone rather than dangling. (The skill file chat's paperclip **is** defined — see section 12.) |
 | **Help (?)** | Static link, no backend |
 
 Anything in that second table stays **unbuilt** until it is specified. Do not
 invent schema for it.
+
+### Page layout (2026-09-17)
+
+Three pages share one shape: **no page header, two panes, a draggable seam.**
+
+- **Shows (`/` and `/shows/:id`)** — the landing page. Shows rail left (search,
+  New show, per-row episode count), the selected show's detail and episodes
+  table right. Both URLs render the same component; `/` just leaves the right
+  pane empty, which keeps a show linkable and back working. `ShowDetailPage` is
+  deleted. The rail is a fixed `lg:w-80`, not resizable.
+- **Episode chat (`/episodes/:id`)** — `EpisodeBar` (collapsible: file size,
+  pages, status, View original, back to show, parse error) then the transcript
+  and composer; promo panel right.
+- **Skill file chat (`/skill-files/:slug/chat`)** — `SkillFileBar` (collapsible:
+  description, language, duration, size, created, active/retired, tags,
+  changelog, back links) then the transcript; content editor right.
+
+**The resizable split** is `hooks/useSplitWidth.ts` + `components/ui/SplitHandle.tsx`,
+shared by both chat pages. Default 42% chat / 58% output — the output pane holds
+a full promo script or a whole `.md`, and wraps badly when it is the narrower
+one. Clamped 25–70%, persisted per page in `localStorage`
+(`chat:splitPercent`, `skill-chat:splitPercent`), reset on double-click,
+keyboard-adjustable. Below `lg` the panes stack and the handle hides.
+
+**One seam, not three.** At `lg` the left pane drops its right border and
+rounding, the right pane drops its left, and the 1px handle is the only rule
+between them. The handle's hit area is an invisible child overhanging 6px each
+side — do not turn that back into padding on the handle, which reopens the gap.
+
+**The shell** (`components/layout/AppShell.tsx`) has no top padding, so content
+starts flush under the topbar and full-height pages get every pixel. `main`
+still scrolls; full-height pages use `lg:h-full lg:min-h-0` inside it. Do not
+give `main` `overflow-hidden` — the skill-file list pages rely on it scrolling.
+
+**Composer.** The model picker is a 28px icon button; the model name appears
+only in its popover, and in the `title`/`aria-label`. No helper line under the
+composer — the empty transcript already says what `@` does.
 
 ---
 
@@ -759,6 +805,10 @@ any attached promos with their verdicts.
 - **Propose a removal alongside each addition.** Every revision adds rules; after
   five rounds the file is a pile of narrow "don't repeat that one failure"
   instructions and output quality drops. Flag when the file passes ~800 words.
+  **The UI no longer does** — the content panel's word count is plain, with no
+  threshold or warning, because a skill file may be any length (2026-09-17).
+  The ~800-word line still lives in `skill-editor/prompt.ts`, so the agent will
+  still mention it in chat. Remove it there too if that is unwanted.
 
 ### Save as new version
 
@@ -819,13 +869,13 @@ Archives the conversation (`archived = true`) and starts a fresh one on the next
 turn. `messages` is append-only, so nothing is erased — the transcript stays
 available to admins. Say "Clear chat" in the UI, not "Delete".
 
-### Two things to decide before building
+### Two things to decide before building — **both decided, 2026-09-16**
 
-- **The mockup has two Save buttons** — one in the page header, one on the content
-  panel. Pick one. Two save affordances for one action will cause accidental
-  versions. My recommendation: keep the content panel's Save, drop the header's.
-- **There is no changelog input in the mockup.** Save must prompt for one line.
-  Six months later, "why does v3 say this?" has to be answerable from the row.
+- ~~**The mockup has two Save buttons**~~ — **resolved as recommended.** The
+  header's Save is dropped. Both saves (*Save vN* in place and *Save as new
+  version*) live on the content panel, where the text they act on is.
+- ~~**There is no changelog input in the mockup**~~ — **resolved.**
+  `SaveVersionModal` prompts for one line and `publishRequestSchema` requires it.
 
 ### Where code goes
 

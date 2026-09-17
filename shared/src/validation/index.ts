@@ -4,3 +4,5 @@ export * from './skill-file.js';
 export * from './conversation.js';
 export * from './intent.js';
 export * from './skill-chat.js';
+export * from './people.js';
+export * from './team.js';

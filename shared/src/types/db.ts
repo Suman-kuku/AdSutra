@@ -242,31 +242,34 @@ export type Database = {
       }
       people: {
         Row: {
+          access_status: Database["public"]["Enums"]["access_status"]
           avatar_url: string | null
           created_at: string
           email: string
           id: string
-          is_active: boolean
+          is_active: boolean | null
           name: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          access_status?: Database["public"]["Enums"]["access_status"]
           avatar_url?: string | null
           created_at?: string
           email: string
           id: string
-          is_active?: boolean
+          is_active?: boolean | null
           name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          access_status?: Database["public"]["Enums"]["access_status"]
           avatar_url?: string | null
           created_at?: string
           email?: string
           id?: string
-          is_active?: boolean
+          is_active?: boolean | null
           name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
@@ -654,6 +657,71 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          added_at: string
+          person_id: string
+          team_id: string
+        }
+        Insert: {
+          added_at?: string
+          person_id: string
+          team_id: string
+        }
+        Update: {
+          added_at?: string
+          person_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       skill_file_leaderboard: {
@@ -694,6 +762,13 @@ export type Database = {
       }
     }
     Functions: {
+      can_use_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
+      }
+      can_use_episode: { Args: { p_episode_id: string }; Returns: boolean }
+      can_use_promo: { Args: { p_promo_id: string }; Returns: boolean }
+      can_use_show: { Args: { p_show_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       owns_conversation: {
         Args: { p_conversation_id: string }
@@ -703,8 +778,10 @@ export type Database = {
       owns_promo: { Args: { p_promo_id: string }; Returns: boolean }
       owns_show: { Args: { p_show_id: string }; Returns: boolean }
       refresh_skill_file_stats: { Args: never; Returns: undefined }
+      shares_team_with: { Args: { p_person_id: string }; Returns: boolean }
     }
     Enums: {
+      access_status: "pending" | "approved" | "denied"
       conversation_kind: "episode" | "skill_file"
       episode_status: "uploaded" | "parsing" | "ready" | "failed"
       message_intent: "CREATE" | "EDIT" | "QUESTION"
@@ -841,6 +918,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      access_status: ["pending", "approved", "denied"],
       conversation_kind: ["episode", "skill_file"],
       episode_status: ["uploaded", "parsing", "ready", "failed"],
       message_intent: ["CREATE", "EDIT", "QUESTION"],
